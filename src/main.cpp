@@ -58,13 +58,13 @@ void performPowerTest(int timeBetween_ms, int testDuration_ms) {
 void loop() {
   if (Serial.available()) {
     input = Serial.read();
-    /* Flush Serial */
-    Serial.flush();
     Serial.print("Command Received: ");
     Serial.println(input);
     switch (input)
     {
     case 'r': { /* Code to reset the QT+ */
+      /* Flush Serial */
+      Serial.flush();
       Serial.println("Resetting the QT+");
       digitalWrite(QT_RESET_PIN, LOW);
       delay(250);
@@ -76,6 +76,8 @@ void loop() {
       break;
     }
     case 'T': { /* Test connection */
+      /* Flush Serial */
+      Serial.flush();
       Serial.println("C");
       break;
     }
@@ -91,6 +93,8 @@ void loop() {
       break;
     }
     default:
+      /* Flush Serial */
+      Serial.flush();
       Serial.println("Unkown command!");
       break;
     }
