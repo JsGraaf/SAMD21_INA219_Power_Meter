@@ -91,10 +91,8 @@ void loop() {
       /* Clear serial */
       clearSerialBuffer();
       /* Calculate amount of measurements */
-      // performPowerTest(timeBetween_ms, testDuration_ms);
-      performPowerTest(200, 1000);
+      performPowerTest(timeBetween_ms, testDuration_ms);
       Serial.write("END");
-      Serial.write('\n');
       break;
     }
     default:
