@@ -86,8 +86,8 @@ void loop() {
     }
     case 'p': { /* Code to run power test */
       /* Get duration from the serial interface */
-      int testDuration_ms = Serial.readStringUntil(' ').toInt();
-      int timeBetween_ms = Serial.readStringUntil('\n').toInt();
+      int testDuration_ms = Serial.parseInt();
+      int timeBetween_ms = Serial.parseInt();
       /* Clear serial */
       clearSerialBuffer();
       /* Calculate amount of measurements */
