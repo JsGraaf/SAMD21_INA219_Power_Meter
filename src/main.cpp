@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include <Adafruit_INA219.h>
 
-#define QT_RESET_PIN 1
-#define QT_USR_BTN 2
+#define QT_RESET_PIN 8
+#define QT_USR_BTN 7
 
 Adafruit_INA219 INA219;
 
@@ -14,8 +14,15 @@ struct measureStruct {
 
 char input = '0';
 
+void clearSerialBuffer() {
+  while (Serial.available()) {
+    Serial.read();
+  }
+}
+
 void setup() {
   Serial.begin(115200);
+  clearSerialBuffer();
   delay(2000);
 
   /* Configuring pins */
@@ -24,13 +31,11 @@ void setup() {
 
   /* Starting and testing INA219 */
   if (!INA219.begin()) {
-    Serial.println("Unable to find INA219");
+    Serial.write("f");
     while(1) {delay(10);}
   }
   /* Calibrate INA219 for 16v 400mA range */
   INA219.setCalibration_16V_400mA();
-  
-  Serial.println("Power Meter and Controller online");
 }
 
 void samplePower(measureStruct* sample) {
@@ -42,30 +47,27 @@ void samplePower(measureStruct* sample) {
 }
 
 void sendSample(measureStruct sample) {
-  Serial.printf("%f:%f:%f;", sample.current_mA, sample.loadvoltage, sample.power_mW);
+  Serial.printf("%f:%f:%f;", sample.loadvoltage, sample.current_mA, sample.power_mW);
 }
 
 void performPowerTest(int timeBetween_ms, int testDuration_ms) {
   measureStruct sample;
-  // +1ms for conversion time of INA219
-  int samples = (testDuration_ms/(timeBetween_ms + 1));
+  // Calculate amount of samples
+  int samples = (testDuration_ms/timeBetween_ms);
   for (int i=0; i<samples; i++) {
     samplePower(&sample);
     sendSample(sample);
+    delay(max(timeBetween_ms-1, 0));
   }
 }
 
 void loop() {
   if (Serial.available()) {
     input = Serial.read();
-    Serial.print("Command Received: ");
-    Serial.println(input);
+    Serial.write('c');
     switch (input)
     {
     case 'r': { /* Code to reset the QT+ */
-      /* Flush Serial */
-      Serial.flush();
-      Serial.println("Resetting the QT+");
       digitalWrite(QT_RESET_PIN, LOW);
       delay(250);
       digitalWrite(QT_RESET_PIN, HIGH);
@@ -73,12 +75,13 @@ void loop() {
       digitalWrite(QT_USR_BTN, LOW);
       delay(250);
       digitalWrite(QT_USR_BTN, HIGH);
+      /* Flush Serial */
+      Serial.write('d');
       break;
     }
-    case 'T': { /* Test connection */
+    case 't': { /* Test connection */
       /* Flush Serial */
-      Serial.flush();
-      Serial.println("C");
+      Serial.write('c');
       break;
     }
     case 'p': { /* Code to run power test */
@@ -86,16 +89,17 @@ void loop() {
       int testDuration_ms = Serial.readStringUntil(' ').toInt();
       int timeBetween_ms = Serial.readStringUntil('\n').toInt();
       /* Clear serial */
-      Serial.flush();
+      clearSerialBuffer();
       /* Calculate amount of measurements */
-      performPowerTest(timeBetween_ms, testDuration_ms);
-      Serial.println("Done!");
+      // performPowerTest(timeBetween_ms, testDuration_ms);
+      performPowerTest(200, 1000);
+      Serial.write("END");
+      Serial.write('\n');
       break;
     }
     default:
       /* Flush Serial */
-      Serial.flush();
-      Serial.println("Unkown command!");
+      Serial.write('e');
       break;
     }
   }
