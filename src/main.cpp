@@ -3,6 +3,7 @@
 
 #define QT_RESET_PIN 8
 #define QT_USR_BTN 7
+#define QT_ENABLE_PIN 9
 
 Adafruit_INA219 INA219;
 
@@ -28,10 +29,12 @@ void setup() {
   /* Configuring pins */
   pinMode(QT_RESET_PIN, OUTPUT);
   pinMode(QT_USR_BTN, OUTPUT);
+  pinMode(QT_ENABLE_PIN, OUTPUT);
   
   /* Pulling high to prevent stuck in reset */
   digitalWrite(QT_RESET_PIN, HIGH);
   digitalWrite(QT_USR_BTN, HIGH);
+  digitalWrite(QT_ENABLE_PIN, LOW);
 
   /* Starting and testing INA219 */
   if (!INA219.begin()) {
@@ -91,13 +94,18 @@ void loop() {
       /* Get duration from the serial interface */
       int testDuration_ms = Serial.parseInt();
       int timeBetween_ms = Serial.parseInt();
+      if (testDuration_ms == 0) {
+        testDuration_ms = 10000;
+      }
+      if (timeBetween_ms == 0) {
+        timeBetween_ms = 500;
+      }
       /* Clear serial */
       clearSerialBuffer();
       /* Enable circuits */
-      digitalWrite(QT_USR_BTN, LOW);
-      /* Calculate amount of measurements */
+      digitalWrite(QT_ENABLE_PIN, HIGH);
       performPowerTest(timeBetween_ms, testDuration_ms);
-      digitalWrite(QT_USR_BTN, HIGH);
+      digitalWrite(QT_ENABLE_PIN, LOW);
       Serial.write("END");
       break;
     }
