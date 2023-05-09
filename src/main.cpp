@@ -28,6 +28,10 @@ void setup() {
   /* Configuring pins */
   pinMode(QT_RESET_PIN, OUTPUT);
   pinMode(QT_USR_BTN, OUTPUT);
+  
+  /* Pulling high to prevent stuck in reset */
+  digitalWrite(QT_RESET_PIN, HIGH);
+  digitalWrite(QT_USR_BTN, HIGH);
 
   /* Starting and testing INA219 */
   if (!INA219.begin()) {
@@ -69,13 +73,12 @@ void loop() {
     {
     case 'r': { /* Code to reset the QT+ */
       digitalWrite(QT_RESET_PIN, LOW);
-      delay(250);
+      delay(1000);
       digitalWrite(QT_RESET_PIN, HIGH);
       delay(1000);
       digitalWrite(QT_USR_BTN, LOW);
-      delay(250);
+      delay(1000);
       digitalWrite(QT_USR_BTN, HIGH);
-      /* Flush Serial */
       Serial.write('d');
       break;
     }
@@ -90,8 +93,11 @@ void loop() {
       int timeBetween_ms = Serial.parseInt();
       /* Clear serial */
       clearSerialBuffer();
+      /* Enable circuits */
+      digitalWrite(QT_USR_BTN, LOW);
       /* Calculate amount of measurements */
       performPowerTest(timeBetween_ms, testDuration_ms);
+      digitalWrite(QT_USR_BTN, HIGH);
       Serial.write("END");
       break;
     }
