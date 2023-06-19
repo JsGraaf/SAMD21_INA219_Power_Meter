@@ -109,6 +109,17 @@ void loop() {
       Serial.write("END");
       break;
     }
+    case 'y': { /* Continuous power testing */
+      // Get 1 sample and print 1 sample per 500ms
+      measureStruct sample;
+      while (!Serial.available()) {
+        samplePower(&sample);
+        Serial.printf("%f:%f:%f\n", sample.loadvoltage, sample.current_mA, sample.power_mW);
+        delay(500);
+      }
+      clearSerialBuffer();
+      break;
+    }
     default:
       /* Flush Serial */
       Serial.write('e');
