@@ -4,6 +4,9 @@
 #define QT_RESET_PIN 8
 #define QT_USR_BTN 7
 #define QT_ENABLE_PIN 9
+#define QT_LDO2_PIN 2
+
+#define ADC_COMP 0.013
 
 Adafruit_INA219 INA219;
 
@@ -11,6 +14,7 @@ struct measureStruct {
   float current_mA = 0;
   float loadvoltage = 0;
   float power_mW = 0;
+  float LDO2_v = 0;
 };
 
 char input = '0';
@@ -30,6 +34,7 @@ void setup() {
   pinMode(QT_RESET_PIN, OUTPUT);
   pinMode(QT_USR_BTN, OUTPUT);
   pinMode(QT_ENABLE_PIN, OUTPUT);
+  pinMode(QT_LDO2_PIN, INPUT);
   
   /* Pulling high to prevent stuck in reset */
   digitalWrite(QT_RESET_PIN, HIGH);
@@ -43,6 +48,8 @@ void setup() {
   }
   /* Calibrate INA219 for 16v 400mA range */
   INA219.setCalibration_16V_400mA();
+  /* Set ADC resolution to 12 bits */
+  analogReadResolution(12);
 }
 
 void samplePower(measureStruct* sample) {
@@ -51,10 +58,12 @@ void samplePower(measureStruct* sample) {
   sample->current_mA = INA219.getCurrent_mA();
   sample->power_mW = INA219.getPower_mW();
   sample->loadvoltage = busvoltage + (shuntvoltage / 1000);
+  // Max level is 3.3v (logic high of XIAO), 12-bit res gives 4096
+  sample->LDO2_v = analogRead(QT_LDO2_PIN) * 3.3 / 4096.0 - ADC_COMP;
 }
 
 void sendSample(measureStruct sample) {
-  Serial.printf("%f:%f:%f;", sample.loadvoltage, sample.current_mA, sample.power_mW);
+  Serial.printf("%f:%f:%f:%f;", sample.loadvoltage, sample.current_mA, sample.power_mW, sample.LDO2_v);
 }
 
 void performPowerTest(int timeBetween_ms, int testDuration_ms) {
@@ -114,7 +123,8 @@ void loop() {
       measureStruct sample;
       while (!Serial.available()) {
         samplePower(&sample);
-        Serial.printf("%f:%f:%f\n", sample.loadvoltage, sample.current_mA, sample.power_mW);
+        sendSample(sample);
+        Serial.println("\n");
         delay(500);
       }
       clearSerialBuffer();
