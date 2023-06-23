@@ -7,6 +7,8 @@
 #define QT_LDO2_PIN 2
 
 #define ADC_COMP 0.013
+#define NOT_ENABLED_SAMPLE_COUNT 10
+#define ENABLED_SAMPLE_COUNT 10
 
 Adafruit_INA219 INA219;
 
@@ -70,7 +72,18 @@ void performPowerTest(int timeBetween_ms, int testDuration_ms) {
   measureStruct sample;
   // Calculate amount of samples
   int samples = (testDuration_ms/timeBetween_ms);
+  // Must be at least 15
+  samples = max(NOT_ENABLED_SAMPLE_COUNT*2+ENABLED_SAMPLE_COUNT, samples);
+  bool enabled = false;
   for (int i=0; i<samples; i++) {
+    if (!enabled && samples > NOT_ENABLED_SAMPLE_COUNT) {
+      // Enable ROs
+      digitalWrite(QT_ENABLE_PIN, HIGH);
+    }
+    if (enabled && i > samples-NOT_ENABLED_SAMPLE_COUNT) {
+      // Disable ROs
+      digitalWrite(QT_ENABLE_PIN, LOW);
+    }
     samplePower(&sample);
     sendSample(sample);
     delay(max(timeBetween_ms-1, 0));
@@ -112,21 +125,23 @@ void loop() {
       /* Clear serial */
       clearSerialBuffer();
       /* Enable circuits */
-      digitalWrite(QT_ENABLE_PIN, HIGH);
       performPowerTest(timeBetween_ms, testDuration_ms);
-      digitalWrite(QT_ENABLE_PIN, LOW);
       Serial.write("END");
       break;
     }
     case 'y': { /* Continuous power testing */
       // Get 1 sample and print 1 sample per 500ms
       measureStruct sample;
+      // Enable the QT+_ENABLE_PIN
+      digitalWrite(QT_ENABLE_PIN, HIGH);
       while (!Serial.available()) {
         samplePower(&sample);
         sendSample(sample);
-        Serial.println("\n");
+        Serial.printf("\n\r");
         delay(500);
       }
+      // Disable the QT+_ENABLE_PIN
+      digitalWrite(QT_ENABLE_PIN, LOW);
       clearSerialBuffer();
       break;
     }
